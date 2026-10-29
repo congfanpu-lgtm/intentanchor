@@ -1,0 +1,18 @@
+[project]
+name = "intentanchor"
+version = "0.1.0"
+description = "Tool-call safety guard for LLM agents"
+requires-python = ">=3.12"
+# 依赖分装在 WSL 的两个虚拟环境里，准确版本见 requirements/train.txt 和 requirements/serve.txt；
+# 本包用 `uv pip install -e . --no-deps` 装进两个环境
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/intentanchor"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

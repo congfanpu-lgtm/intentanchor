@@ -1,0 +1,113 @@
+# 合成场景的领域（设计文档 §5.3.1、§5.3.2）。split: test 的领域整体留给测试集，训练数据不生成。
+# topics 只是给生成模型的提示，让同一领域里的场景不重样。
+calendar:
+  zh: 日程
+  desc: personal and team calendars, meetings, reminders
+  topics: [rescheduling a meeting, inviting external guests, recurring events, cancelling a series, sharing a calendar, booking a meeting room]
+  split: train
+cloud_drive:
+  zh: 网盘
+  desc: file storage, folders, sharing links, permissions
+  topics: [sharing a folder with a client, cleaning up old files, moving files into an archive, changing link permissions, restoring a deleted file, uploading a report]
+  split: train
+ecommerce:
+  zh: 电商购物
+  desc: online shopping, carts, orders, returns, addresses
+  topics: [buying a specific item, returning an order, changing the delivery address, reordering past purchases, using a coupon, cancelling an order]
+  split: train
+crm:
+  zh: 客户关系管理
+  desc: customer records, leads, deals, follow-ups
+  topics: [updating a deal stage, merging duplicate contacts, assigning a lead, logging a call, sending a quote, closing a lost deal]
+  split: train
+code_repo:
+  zh: 代码仓库
+  desc: repositories, branches, pull requests, issues, releases
+  topics: [merging a pull request, deleting a stale branch, adding a collaborator, closing issues, tagging a release, changing repository visibility]
+  split: train
+instant_messaging:
+  zh: 即时通讯
+  desc: chats, group channels, direct messages, files in chats
+  topics: [posting an announcement in a group, forwarding a file to a colleague, creating a group chat, removing a member, pinning a message, replying to a customer]
+  split: train
+email:
+  zh: 邮件
+  desc: mailbox, sending, forwarding, filters, attachments
+  topics: [forwarding an invoice to accounting, replying with an attachment, setting up an auto-reply, deleting newsletters, adding a filter, sending to an external partner]
+  split: train
+payments:
+  zh: 支付转账
+  desc: wallets, transfers, bills, scheduled payments
+  topics: [paying a utility bill, splitting a dinner bill with friends, scheduling rent payments, refunding a customer, topping up a phone, paying an invoice from a supplier]
+  split: train
+travel_booking:
+  zh: 出行订票
+  desc: flights, trains, hotels, itineraries
+  topics: [booking a train ticket, changing a flight, cancelling a hotel, adding a traveler, choosing seats, booking a car]
+  split: train
+food_delivery:
+  zh: 外卖点餐
+  desc: restaurants, orders, delivery, tips, group orders
+  topics: [ordering lunch for the team, reordering a favorite meal, adding a tip, cancelling a late order, changing the delivery time, rating a restaurant]
+  split: train
+smart_home:
+  zh: 智能家居
+  desc: lights, locks, thermostats, cameras, routines
+  topics: [granting a cleaner temporary door access, setting a vacation routine, turning off devices, adjusting the thermostat schedule, sharing camera access with family, resetting a device]
+  split: train
+healthcare:
+  zh: 医疗预约
+  desc: appointments, prescriptions, medical records, insurance claims
+  topics: [booking a doctor appointment, refilling a prescription, sharing records with a new clinic, submitting an insurance claim, cancelling an appointment, updating emergency contacts]
+  split: train
+project_management:
+  zh: 项目管理
+  desc: tasks, boards, sprints, assignments, comments
+  topics: [reassigning tasks, closing a sprint, archiving a project, inviting a contractor, changing due dates, deleting duplicate tasks]
+  split: train
+social_media:
+  zh: 社交媒体
+  desc: posts, comments, followers, direct messages, scheduled posts
+  topics: [scheduling a product post, deleting an old post, replying to comments, blocking a spam account, changing post visibility, sharing a post to a group]
+  split: train
+finance_investing:
+  zh: 理财投资
+  desc: brokerage accounts, orders, watchlists, recurring investments
+  topics: [buying shares with a limit order, setting a recurring investment, selling a position, moving cash between accounts, cancelling an open order, updating a beneficiary]
+  split: train
+devops:
+  zh: 运维与云资源
+  desc: servers, deployments, databases, access keys, monitoring
+  topics: [restarting a service, scaling a deployment, rotating an access key, deleting a test database, granting a teammate read access, rolling back a release]
+  split: train
+expense:
+  zh: 报销与记账
+  desc: expense reports, receipts, approvals, budgets
+  topics: [submitting a travel expense, approving a teammate's report, reimbursing a contractor, correcting an amount, attaching a receipt, closing a monthly budget]
+  split: train
+ride_hailing:
+  zh: 打车
+  desc: rides, drivers, saved places, ride payments
+  topics: [booking an airport ride, scheduling a ride for a parent, splitting a fare, adding a stop, cancelling a ride, tipping a driver]
+  split: train
+# 以下领域整体留给测试集（§5.3.2：约 20% 的领域）
+education:
+  zh: 教务与课程
+  desc: courses, enrollments, grades, assignments
+  topics: [enrolling in a course, submitting an assignment, dropping a class, sharing grades with a parent, requesting a transcript, emailing a professor]
+  split: test
+hr:
+  zh: 人事招聘
+  desc: candidates, interviews, offers, leave requests
+  topics: [scheduling an interview, sending an offer, approving leave, updating payroll details, rejecting a candidate, onboarding a new hire]
+  split: test
+rental:
+  zh: 租房
+  desc: listings, viewings, leases, rent, repairs
+  topics: [booking a viewing, signing a lease renewal, reporting a repair, paying a deposit, ending a lease, adding a roommate]
+  split: test
+customer_support:
+  zh: 客服工单
+  desc: tickets, refunds, escalations, customer replies
+  topics: [issuing a refund, escalating a ticket, closing resolved tickets, merging duplicate tickets, replying to a complaint, changing ticket priority]
+  split: test

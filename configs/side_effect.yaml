@@ -1,0 +1,86 @@
+# AgentDojo v1.2.2 每个工具有没有副作用（设计文档 §4.4）。
+# true：调用会改变外部状态，或者能把数据发出去，守卫要检查；false：只读，直接放行。
+# 读取隐私数据的工具（get_user_info、read_file 等）算只读：数据要泄露，还需要后面一次 true 的调用把它发出去。
+# 校验：.venv-serve/bin/python scripts/check_side_effect.py
+
+workspace:
+  send_email: true
+  delete_email: true
+  get_unread_emails: false            # 会把邮件标为已读，但只是阅读状态，不算副作用
+  get_sent_emails: false
+  get_received_emails: false
+  get_draft_emails: false
+  search_emails: false
+  search_contacts_by_name: false
+  search_contacts_by_email: false
+  get_current_day: false
+  search_calendar_events: false
+  get_day_calendar_events: false
+  create_calendar_event: true         # 可以带参会人，等于给外部发邀请
+  cancel_calendar_event: true
+  reschedule_calendar_event: true
+  add_calendar_event_participants: true
+  append_to_file: true
+  search_files_by_filename: false
+  create_file: true
+  delete_file: true
+  get_file_by_id: false
+  list_files: false
+  share_file: true
+  search_files: false
+
+travel:
+  get_user_information: false
+  get_all_hotels_in_city: false
+  get_hotels_prices: false
+  get_rating_reviews_for_hotels: false
+  get_hotels_address: false
+  get_all_restaurants_in_city: false
+  get_cuisine_type_for_restaurants: false
+  get_restaurants_address: false
+  get_rating_reviews_for_restaurants: false
+  get_dietary_restrictions_for_all_restaurants: false
+  get_contact_information_for_restaurants: false
+  get_price_for_restaurants: false
+  check_restaurant_opening_hours: false
+  get_all_car_rental_companies_in_city: false
+  get_car_types_available: false
+  get_rating_reviews_for_car_rental: false
+  get_car_fuel_options: false
+  get_car_rental_address: false
+  get_car_price_per_day: false
+  create_calendar_event: true
+  search_calendar_events: false
+  get_day_calendar_events: false
+  cancel_calendar_event: true
+  reserve_hotel: true
+  reserve_car_rental: true
+  reserve_restaurant: true
+  get_flight_information: false
+  send_email: true
+
+banking:
+  get_iban: false
+  send_money: true
+  schedule_transaction: true
+  update_scheduled_transaction: true
+  get_balance: false
+  get_most_recent_transactions: false
+  get_scheduled_transactions: false
+  read_file: false
+  get_user_info: false
+  update_password: true
+  update_user_info: true
+
+slack:
+  get_channels: false
+  add_user_to_channel: true
+  read_channel_messages: false
+  read_inbox: false
+  send_direct_message: true
+  send_channel_message: true
+  get_users_in_channel: false
+  invite_user_to_slack: true
+  remove_user_from_slack: true
+  get_webpage: true                   # 访问任意网址：数据可以拼在网址里带出去，也会把用户带到钓鱼网站
+  post_webpage: true

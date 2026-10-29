@@ -1,0 +1,17 @@
+# 密钥
+.env
+.env.*
+
+# 虚拟环境、缓存
+.venv/
+.venv-serve/
+__pycache__/
+*.pyc
+
+# 数据和实验结果不进 git：外部测试集不能再分发，训练数据不公开，中文测试集另在 Hugging Face 发布
+# /data/ 只匹配根目录，不碰 src/intentanchor/data/
+/data/
+runs/
+
+# 系统文件
+.DS_Store
