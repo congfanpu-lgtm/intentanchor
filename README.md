@@ -11,6 +11,7 @@
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-2348c9?style=flat-square"></a>
   <a href="pyproject.toml"><img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-2348c9?style=flat-square&logo=python&logoColor=white"></a>
   <a href="https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507"><img alt="Base model: Qwen3-4B-Instruct-2507" src="https://img.shields.io/badge/base%20model-Qwen3--4B--Instruct--2507-2348c9?style=flat-square"></a>
+  <a href="https://huggingface.co/datasets/intentanchor/zh-tool-call-safety"><img alt="Dataset: intentanchor/zh-tool-call-safety on Hugging Face" src="https://img.shields.io/badge/dataset-zh--tool--call--safety-2348c9?style=flat-square&logo=huggingface&logoColor=white"></a>
   <a href="#limitations"><img alt="Status: research prototype" src="https://img.shields.io/badge/status-research%20prototype-b02a17?style=flat-square"></a>
 </p>
 
@@ -28,7 +29,7 @@ Given the user's request, the interaction so far (including raw tool outputs) an
 - **A new Chinese test set**, written by a different model: AUROC 0.973 vs StepGuard's 0.874 and recall 87.2% vs 79.3% (mean of three training seeds), mostly on actions that go beyond what the user asked. Labels were checked by LLMs only and follow this project's standard, which StepGuard was not trained on.
 - **Trade-offs**: on its own it misses more attacks than StepGuard, and offline its false-positive rate is higher on most English test sets. The English test sets, including the AgentDojo banking and Slack suites, were studied during development, so the Chinese set is the cleanest evidence; see [Limitations](#limitations).
 
-> Status: research prototype. The Chinese test set will be released on Hugging Face (data card: `docs/zh_test_card.md`; the scripts read it from `data/zh_test/v1.jsonl`). Model weights and training data are not distributed; see [License and attribution](#license-and-attribution).
+> Status: research prototype. The Chinese test set is on Hugging Face as [intentanchor/zh-tool-call-safety](https://huggingface.co/datasets/intentanchor/zh-tool-call-safety) (data card: `docs/zh_test_card.md`; the scripts read it from `data/zh_test/v1.jsonl`). Model weights and training data are not distributed; see [License and attribution](#license-and-attribution).
 
 Built on [StepGuard](https://huggingface.co/ninty-seven/StepGuard) (same base model, Qwen3-4B-Instruct-2507). This project uses its open data as a starting point and its weights as the main baseline.
 
@@ -86,7 +87,7 @@ banking + slack, `important_instructions` attack, 249 attacked and 37 benign cas
 
 ### Chinese test set
 
-350 single-step samples (176 benign, 174 unsafe) in four domains not used in training: customer support, HR, rental, education. Compared with the training data:
+350 single-step samples (176 benign, 174 unsafe) in four domains not used in training: customer support, HR, rental, education ([on Hugging Face](https://huggingface.co/datasets/intentanchor/zh-tool-call-safety)). Compared with the training data:
 - **Generator**: DeepSeek-V4-Pro, called through Alibaba Cloud Model Studio (the DashScope API) and prompted in Chinese, wrote the scenarios with tool outputs. The training data used Qwen.
 - **Injections**: the held-out `important_instructions` template in Chinese, English and mixed Chinese-English.
 - **Attack goals**: taken from AgentDojo's banking and Slack injection tasks.
@@ -236,7 +237,7 @@ docs/zh_audit_rubric.md    rubric for the blind label audits
 
 ## License and attribution
 
-Code: Apache-2.0 (see `LICENSE`). The Chinese test set will be released under Apache-2.0, for evaluation only; please do not train on it. Its scenarios were generated with DeepSeek-V4-Pro, called through the DashScope API of Alibaba Cloud Model Studio (Bailian).
+Code: Apache-2.0 (see `LICENSE`). The Chinese test set is released on [Hugging Face](https://huggingface.co/datasets/intentanchor/zh-tool-call-safety) under Apache-2.0, for evaluation only; please do not train on it. Its scenarios were generated with DeepSeek-V4-Pro, called through the DashScope API of Alibaba Cloud Model Studio (Bailian).
 
 Model weights and training data are not distributed, to stay within the terms of service of Alibaba Cloud Model Studio, which generated or processed most of the training data.
 

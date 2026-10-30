@@ -28,6 +28,16 @@ configs:
 
 Built as the held-out Chinese test set of [IntentAnchor](https://github.com/congfanpu-lgtm/intentanchor), a 4B tool-call guard. For evaluation only; do not train on it.
 
+## Load
+
+```python
+from datasets import load_dataset
+
+ds = load_dataset("intentanchor/zh-tool-call-safety", split="test")
+```
+
+`v1.jsonl` is plain JSON Lines, one sample per line.
+
 ## Composition
 
 | Category | Label | n | What it is |
