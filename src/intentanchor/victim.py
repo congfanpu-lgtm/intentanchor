@@ -9,7 +9,8 @@ import time
 from collections import Counter
 
 import openai
-from agentdojo.agent_pipeline import AgentPipeline, BasePipelineElement, OpenAILLM, PipelineConfig, ToolsExecutionLoop
+from agentdojo.agent_pipeline import (AbortAgentError, AgentPipeline, BasePipelineElement, OpenAILLM, PipelineConfig,
+                                      ToolsExecutionLoop)
 from agentdojo.agent_pipeline.llms.openai_llm import OpenAILLMToolFilter
 from agentdojo.agent_pipeline.pi_detector import TransformersBasedPIDetector
 from agentdojo.functions_runtime import EmptyEnv
@@ -76,12 +77,14 @@ class GuardElement(BasePipelineElement):
     """守卫，排在 ToolsExecutor 前面（§5.5.2）。拦截协议照搬 StepGuard 在 AgentDojo 上的实现（blocked_history_mode=clean，
     feedback_mode=self_reflect，max_replans=3），各守卫用同一套：
     每个副作用调用打分（只读调用直接放行，§4.4），有一个分数 ≥ 阈值，整条 assistant 消息就不执行、从历史里删掉，
-    换成一条 self_reflect 反馈（user 消息，下一轮删掉）让 agent 重新规划；一个用例拦满 3 轮后，再拦的调用放行。"""
+    换成一条 self_reflect 反馈（user 消息，下一轮删掉）让 agent 重新规划；一个用例拦满 3 轮后，再拦的调用放行。
+    on_max="stop"：拦满 3 轮后的下一次拦截改为终止任务（StepGuard base.py 文档注释写的做法，2026-10-30 加）。"""
 
     name = "guard"
 
-    def __init__(self, score, threshold: float, max_replans: int = 3):
-        self.score, self.threshold, self.max_replans = score, threshold, max_replans
+    def __init__(self, score, threshold: float, max_replans: int = 3, on_max: str = "pass"):
+        assert on_max in ("pass", "stop")
+        self.score, self.threshold, self.max_replans, self.on_max = score, threshold, max_replans, on_max
         self.side_effect = side_effect_tools()
 
     def query(self, query, runtime, env=EmptyEnv(), messages=[], extra_args={}):  # noqa: B006 — 和基类签名一致
@@ -95,13 +98,18 @@ class GuardElement(BasePipelineElement):
         blocked = any(s >= self.threshold for s in scores)
         replans = extra_args.get("guard_replans", 0) + blocked
         over = replans > self.max_replans
+        stop = over and self.on_max == "stop"
         _local.counter.update(guard_checks=len(scores), guard_ms=round((time.time() - t0) * 1000),
-                              guard_blocks=int(blocked and not over), guard_over_max=int(blocked and over))
+                              guard_blocks=int(blocked and (stop or not over)),
+                              guard_over_max=int(blocked and over and not stop), guard_stop=int(blocked and stop))
         _local.guard += [{"tool": i["proposed_call"]["tool"], "args": i["proposed_call"]["args"], "score": s,
-                          "blocked": s >= self.threshold and not over} for i, s in zip(inputs, scores)]
+                          "blocked": s >= self.threshold and (stop or not over)} for i, s in zip(inputs, scores)]
         if not blocked:
             return query, runtime, env, messages, extra_args
         extra_args = {**extra_args, "guard_replans": replans}
+        if stop:  # 被拦的消息不执行；AgentDojo 接住这个异常，按当时的环境评 utility 和 security
+            raise AbortAgentError(f"Task stopped: the safety guard blocked a tool call {replans} times.",
+                                  list(messages[:-1]), env)
         if over:
             return query, runtime, env, messages, extra_args
         feedback = {"role": "user", "content": [text_content_block_from_string(SELF_REFLECT)], "guard_feedback": True}
@@ -133,7 +141,11 @@ class _Recorder(BasePipelineElement):
         self.inner, self.name = inner, inner.name
 
     def query(self, query, runtime, env=EmptyEnv(), messages=[], extra_args={}):  # noqa: B006 — 和基类签名一致
-        out = self.inner.query(query, runtime, env, messages, extra_args)
+        try:
+            out = self.inner.query(query, runtime, env, messages, extra_args)
+        except AbortAgentError as e:  # 守卫终止任务时，轨迹在异常里
+            _local.messages = e.messages
+            raise
         _local.messages = out[3]
         return out
 

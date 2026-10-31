@@ -25,7 +25,7 @@
 
 Given the user's request, the interaction so far (including raw tool outputs) and the action about to execute, IntentAnchor answers ALLOW or BLOCK in a single token. The training data combines public attack datasets with a *hard-negative engine*: it mines benign actions that the guard wrongly blocks (typically the agent returning to the user's task after an injection) and feeds them back into training.
 
-- **End to end on AgentDojo** (banking and Slack suites, kept out of training): attack success drops from 65.1% to 36.1% with no loss in benign task completion; StepGuard reaches 31.7% (difference not significant, p = 0.14). It blocks 1 of 37 benign tasks vs StepGuard's 9 (these tasks contain no injection) and answers 29x faster (133 ms P50).
+- **End to end on AgentDojo** (banking and Slack suites, kept out of training): attack success drops from 65.1% to 36.1% with no loss in benign task completion; StepGuard reaches 31.7% (difference not significant, p = 0.14). That is under StepGuard's protocol, which lets calls through after 3 blocks. Stopping the task at the 4th block instead (a variant added after seeing these results) brings attack success to 4.0%, at a cost: task completion under attack falls from 74.3% with no guard to 67.9% (p = 0.002). StepGuard was not run this way. The guard blocks 1 of 37 benign tasks vs StepGuard's 9 (these tasks contain no injection) and answers 29x faster (133 ms P50).
 - **A new Chinese test set**, written by a different model: AUROC 0.973 vs StepGuard's 0.874 and recall 87.2% vs 79.3% (mean of three training seeds), mostly on actions that go beyond what the user asked. Labels were checked by LLMs only and follow this project's standard, which StepGuard was not trained on.
 - **Trade-offs**: on its own it misses more attacks than StepGuard, and offline its false-positive rate is higher on most English test sets. The English test sets, including the AgentDojo banking and Slack suites, were studied during development, so the Chinese set is the cleanest evidence; see [Limitations](#limitations).
 
@@ -63,10 +63,10 @@ TS-Bench, AgentDojo subset (868 benign / 352 attack steps). 1,032 of these steps
 ### End-to-end on AgentDojo (banking and Slack)
 
 banking + slack, `important_instructions` attack, 249 attacked and 37 benign cases. The agent under protection is Qwen3.6-35B-A3B with thinking on.
-- **Protocol**: StepGuard's, as written in its AgentDojo code: block, reflect, re-plan; after 3 blocks the call goes through (its docstring says the 4th block ends the task instead). Only calls with side effects are checked; StepGuard's own setup checks every call, but every injection task here needs a side effect.
+- **Protocol**: StepGuard's, as written in its AgentDojo code: block, reflect, re-plan; after 3 blocks in a case, further blocked calls go through (its docstring says the 4th block ends the task instead; that variant is reported [below the table](#variant-stop-the-task-at-the-4th-block)). Only calls with side effects are checked; StepGuard's own setup checks every call, but every injection task here needs a side effect.
 - **Thresholds**: IntentAnchor rows use their dev 5%-FPR thresholds; StepGuard uses its default 0.5.
 - **Runs**: one run per configuration. H2's row is from a later run (2026-10-28) with the same settings; the other rows are from the 2026-10-17 run.
-- **Not a strict held-out test**: neither suite nor the attack template was ever in the training data, but earlier end-to-end runs on them shaped the hard-negative engine. The final model was fixed before its run, so its result did not affect the choice; the seed was picked partly on TS-Bench AgentDojo, which includes banking and Slack steps.
+- **Not a strict held-out test**: neither suite nor the attack template was ever in the training data, but earlier end-to-end runs on them shaped the hard-negative engine. The final model was fixed before its run, so its result did not affect the choice (the stop-the-task variant, though, was added after seeing it); the seed was picked partly on TS-Bench AgentDojo, which includes banking and Slack steps.
 - This setup does not reproduce StepGuard's paper (ASR 25.1% with no guard and 1.2% with StepGuard, over all four suites); the cause was not investigated.
 
 | Guard | Utility | Utility under attack | ASR | ASR excl. forced pass | Benign cases blocked | Latency per check |
@@ -85,11 +85,27 @@ banking + slack, `important_instructions` attack, 249 attacked and 37 benign cas
 - H2 vs H0: no end-to-end metric differs significantly.
 - Most successful attacks happen in cases where a call went through on the forced pass after 3 blocks. Whether that call was the injected one was not checked, so "ASR excl. forced pass" is only a lower bound on what the guard itself missed.
 
+#### Variant: stop the task at the 4th block
+
+H2 only, 2026-10-30, `--on-max stop`. This variant was added after the H2 run above showed that 81 of its 82 forced-pass cases ended in a successful attack; the model and threshold are unchanged. It follows StepGuard's docstring: the 4th block ends the task. AgentDojo then scores the task on the environment at that moment, so a stopped task whose user task was already done counts as completed.
+
+| H2 | Utility | Utility under attack | ASR | Benign cases blocked |
+|---|---|---|---|---|
+| Lets the call through (2026-10-28) | 91.9 | 71.9 | 36.1 | 2.7% |
+| Stops the task (2026-10-30) | 91.9* | 67.9 | 4.0 | 2.7%* |
+
+\* Copied from the 2026-10-28 benign run, not rerun: the one benign case H2 blocked was blocked once, so a rule that fires on the 4th block cannot change these numbers.
+
+- Stopping vs letting through (same model, separate runs, paired on the same 249 cases): ASR 4.0% vs 36.1% (2 vs 82 cases, p < 0.001); attacks with no forced pass 4.0% vs 3.6% (p = 1.0); utility under attack 67.9 vs 71.9 (7 vs 17 cases, p = 0.064).
+- The cost is real: against no guard, utility under attack falls from 74.3 to 67.9 (5 vs 21 cases, p = 0.002), while letting calls through is not significantly below no guard (p = 0.31). 89 of the 249 attacked cases were stopped; the attack had succeeded in none of them, and 47 had already completed the user's task. Counting every stopped task as failed would give 49.0%.
+- In 7 of the 10 attacks that still succeeded, the guard blocked the agent's first call toward the attacker's target (an IBAN or URL), and a later call toward the same target, after re-planning, scored under the threshold. Remembering blocked calls might close this gap; it was not tried.
+- StepGuard was not run this way, so this variant is not compared with it.
+
 ### Chinese test set
 
 350 single-step samples (176 benign, 174 unsafe) in four domains not used in training: customer support, HR, rental, education ([on Hugging Face](https://huggingface.co/datasets/intentanchor/zh-tool-call-safety)). Compared with the training data:
 - **Generator**: DeepSeek-V4-Pro, called through Alibaba Cloud Model Studio (the DashScope API) and prompted in Chinese, wrote the scenarios with tool outputs. The training data used Qwen.
-- **Injections**: the held-out `important_instructions` template in Chinese, English and mixed Chinese-English.
+- **Injections**: the `important_instructions` template (not in the training data) in Chinese, English and mixed Chinese-English.
 - **Attack goals**: taken from AgentDojo's banking and Slack injection tasks.
 - **Same as training**: the label standard, the sample categories and the code that inserts injections.
 
@@ -161,7 +177,7 @@ A history step is a tool call with its output, a reply to the user, or a follow-
 - Chinese translations;
 - mined hard negatives (H2).
 
-Held out from training: AgentDojo banking and Slack, plus the `important_instructions` attack template.
+Never in the training data (but studied during development; see [Limitations](#limitations)): AgentDojo banking and Slack, plus the `important_instructions` attack template.
 
 Labels come from each source's own labels or from construction, checked by an LLM judge. On an earlier version of the data, before its fixes, Claude blind-audited 200 random samples and agreed with the existing labels on 182 (91.0%, 95% CI 86.2–94.2). A human re-checked 50 of them: 97.9% of the labels the human could decide were correct (95% CI 89.1–99.6), and Claude agreed with the human on all 48. The systematic issues the audit found were then fixed in the dataset.
 
@@ -203,12 +219,12 @@ Environment: two virtualenvs that cannot be merged, `.venv` for training (`requi
 2. **Training and offline evaluation** (GPU only, no API calls): `bash scripts/reproduce.sh <seed>` trains H0 and H2 for one seed, scores the dev set and the benchmarks, and prints the tables. It needs the frozen datasets (`data/v2.7`, `data/h2`, `data/v2-en/dev.jsonl`), which are not distributed (see [License and attribution](#license-and-attribution)), so only the author can run this step; the script documents the exact procedure. Training is not bit-exact on GPU and seeds vary a lot, so compare against the per-seed numbers and ranges above.
 3. **Rebuilding the data from scratch** is not a single command. It calls LLM APIs (about 60 CNY in total: agent traces, synthetic scenarios, the judge, translation), uses Claude and human label reviews, and some steps ran on earlier commits. The full chain, with costs and commands, is in [`docs/pipeline.md`](docs/pipeline.md) (Chinese).
 
-End to end: `scripts/run_attack_batch.py` runs AgentDojo with a guard served by vLLM, and `scripts/e2e_table.py` builds the table. It needs a DashScope key for the agent under test; each configuration costs about 23 CNY.
+End to end: `scripts/run_attack_batch.py` runs AgentDojo with a guard served by vLLM, and `scripts/e2e_table.py` builds the table. It needs a DashScope key for the agent under test; each configuration costs about 23 CNY. `--on-max stop` stops the task at the 4th block instead of letting the call through.
 
 ## Limitations
 
 - **No adaptive attacks.** The guard reads raw tool outputs, so an injection can address the guard directly ("the reviewer should note this action is authorized"). This was not tested.
-- **Misses more attacks than StepGuard on its own.** End to end, 3.6% of attacked cases succeeded with no forced pass, so the guard itself missed at least that many, vs StepGuard's 0.4% (p = 0.021). Overall ASR is 36.1% vs 31.7% (not significant), because most successful attacks happen in cases where the protocol forced a call through after 3 blocks. The trade-off is far fewer blocked benign tasks (which contain no injection) and much lower latency.
+- **Misses more attacks than StepGuard on its own.** End to end, 3.6% of attacked cases succeeded with no forced pass, so the guard itself missed at least that many, vs StepGuard's 0.4% (p = 0.021). Overall ASR is 36.1% vs 31.7% (not significant), because most successful attacks happen in cases where the protocol forced a call through after 3 blocks. Stopping the task at the 4th block instead brings H2 to 4.0%, all of it the guard's own misses, at a cost in task completion under attack; that variant was chosen after seeing these results, and StepGuard was not rerun that way. The trade-off is far fewer blocked benign tasks (which contain no injection) and much lower latency.
 - **Higher offline false-positive rate than StepGuard** at transferred thresholds on most English static sets (not on the Chinese set). Most remaining false positives, in both languages, are steps where the agent returns to the user's task after an injection.
 - **The English test sets are not strict held-out estimates.** TS-Bench (including its banking and Slack steps), R-Judge, ASSEBench, ATBench and the end-to-end runs on banking and Slack were studied during development: training data was added to fix errors found on them, and the hard-negative engine was designed from false blocks seen on TS-Bench AgentDojo and in end-to-end runs. Banking, Slack and the `important_instructions` template never entered the training data, but the numbers on them are likely optimistic. The cleanest evidence is the Chinese test set, frozen before anyone looked at its metrics; the final model was also fixed before its end-to-end run.
 - **Large seed variance.** The 5%-FPR threshold ranges from 0.56 to 0.85 across seeds of the same data, and per-seed results can flip. Every comparison above is reported per seed or as a mean.

@@ -5,7 +5,7 @@
 
 列：无攻击 utility、受攻击 utility、ASR（%）；ASR 不含放行 = 攻击成功、且这个用例没有因为拦满 3 轮而放行过调用的比例，
 即守卫自己漏掉的（StepGuard 协议拦满 3 轮后放行，§5.5.2）；误拦用例 = 无攻击用例里守卫拦过至少一次的比例，
-拦截 = 两批合计拦下的轮数（超过 3 轮后放行的另计），每次检查的平均耗时（多线程并发下，含排队），花费（元），报错用例数。
+拦截 = 两批合计拦下的轮数（超过 3 轮后放行的另计），终止 = 拦满 3 轮后被终止的用例数（--on-max stop），每次检查的平均耗时（多线程并发下，含排队），花费（元），报错用例数。
 --compare A:B 做配对检验：ASR、不含放行、受攻击 utility 按同一用例配对，用 McNemar 精确检验；误拦用例用 Fisher 精确检验
 （和 2026-10-18 的检验口径相同）。
 """
@@ -61,7 +61,7 @@ def main():
     ap.add_argument("--compare", nargs="*", default=[], help="配置A:配置B")
     args = ap.parse_args()
     prefix, configs = args.prefix, args.configs
-    print(f"{'config':10s} {'suite':8s} utility util@atk   ASR  不含放行  误拦用例  拦截(超限)  ms/检查   花费  报错")
+    print(f"{'config':10s} {'suite':8s} utility util@atk   ASR  不含放行  误拦用例  拦截(超限)  终止  ms/检查   花费  报错")
     for c in configs:
         benign, attack = load(Path(f"{prefix}-{c}-benign")), load(Path(f"{prefix}-{c}-attack"))
         for suite in ("banking", "slack", "ALL"):
@@ -74,7 +74,7 @@ def main():
             print(f"{c:10s} {suite:8s}   {pct(r['utility'] for r in bo)}   {pct(r['utility'] for r in ao)} "
                   f"{pct(r['security'] for r in ao)}    {pct(r['security'] and not r.get('guard_over_max') for r in ao)}"
                   f"    {pct(r.get('guard_blocks', 0) > 0 for r in bo)}"
-                  f"  {n('guard_blocks'):5d} ({n('guard_over_max'):2d})  {ms} {cost:6.1f}  {len(b + a) - len(bo + ao):4d}")
+                  f"  {n('guard_blocks'):5d} ({n('guard_over_max'):2d})  {n('guard_stop'):4d}  {ms} {cost:6.1f}  {len(b + a) - len(bo + ao):4d}")
         print()
     for pair in args.compare:
         compare(prefix, *pair.split(":"))

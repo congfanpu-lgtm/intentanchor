@@ -28,7 +28,7 @@ from intentanchor.guard import intentanchor_scorer, stepguard_scorer
 from intentanchor.victim import BENCHMARK_VERSION, MODEL, GuardElement, cost_cny, make_client, make_pipeline, run_case
 
 TRACE_KEYS = ("injections", "messages", "guard")
-GUARD_KEYS = ("guard_checks", "guard_blocks", "guard_over_max", "guard_ms")
+GUARD_KEYS = ("guard_checks", "guard_blocks", "guard_over_max", "guard_stop", "guard_ms")
 
 
 def run_one(suite, attack, pipeline, ut_id: str, it_id: str | None) -> dict:
@@ -73,6 +73,8 @@ def main():
     p.add_argument("--defense", default="none", choices=["none", *DEFENSES])
     p.add_argument("--guard", help="本地守卫服务里的模型名（LoRA 名），或 stepguard")
     p.add_argument("--threshold", type=float, help="守卫的拦截阈值（开发集 FPR 5%% 处；StepGuard 用它自己的 0.5）")
+    p.add_argument("--on-max", default="pass", choices=["pass", "stop"],
+                   help="拦满 3 轮后：pass = 再拦的调用放行（StepGuard 代码），stop = 终止任务")
     p.add_argument("--guard-url", default="http://localhost:18000/v1")
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--out", required=True)
@@ -94,7 +96,7 @@ def main():
     if a.guard:
         gc = openai.OpenAI(base_url=a.guard_url, api_key="local", timeout=120, max_retries=2)
         guard = GuardElement(stepguard_scorer(gc) if a.guard == "stepguard" else intentanchor_scorer(gc, a.guard),
-                             a.threshold)
+                             a.threshold, on_max=a.on_max)
     pipeline = make_pipeline(make_client(a.thinking == "on"), None if a.defense == "none" else a.defense, guard)
     suites, attacks, per_suite = {}, {}, []
     for name in a.suites.split(","):

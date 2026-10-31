@@ -43,3 +43,18 @@ def test_blocks_whole_message_then_caps_replans():
     _, _, _, out, extra = guard.query("Pay my bill.", RUNTIME, messages=[*HEAD, last], extra_args={"guard_replans": 3})
     assert out[-1] is last and extra["guard_replans"] == 4             # 拦满 3 轮后放行
     assert victim._local.counter["guard_blocks"] == 2 and victim._local.counter["guard_over_max"] == 1
+
+
+def test_stop_mode_ends_task_on_fourth_block():
+    guard = GuardElement(lambda inp: 0.9, threshold=0.5, on_max="stop")
+    victim._local.counter, victim._local.guard = Counter(), []
+    last = _assistant(("send_money", {"recipient": "X", "amount": 5}, "3"))
+    _, _, _, out, extra = guard.query("Pay my bill.", RUNTIME, messages=[*HEAD, last], extra_args={"guard_replans": 2})
+    assert out[-1]["guard_feedback"] and extra["guard_replans"] == 3       # 第 3 次拦截还是重新规划
+    try:
+        guard.query("Pay my bill.", RUNTIME, messages=[*HEAD, last], extra_args=extra)
+        raise AssertionError("4th block should stop the task")
+    except victim.AbortAgentError as e:
+        assert e.messages[:-1] == HEAD and not e.messages[-1]["tool_calls"]  # 被拦的调用没执行，以助手消息收尾
+    c = victim._local.counter
+    assert c["guard_blocks"] == 2 and c["guard_stop"] == 1 and c["guard_over_max"] == 0
